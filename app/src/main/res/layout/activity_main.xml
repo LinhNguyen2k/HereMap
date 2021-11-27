@@ -100,7 +100,6 @@
                 android:layout_height="wrap_content"
                 android:layout_marginLeft="5dp"
                 android:layout_marginRight="5dp"
-                android:text="..."
                 android:textSize="20dp" />
 
             <!--            <TextView-->
@@ -121,6 +120,16 @@
             android:textColor="#020202"
             android:id="@+id/btnGps"
             android:layout_margin="@dimen/_30sdp"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentRight="true"
+            android:layout_width="@dimen/_30sdp"
+            android:layout_height="@dimen/_30sdp" />
+        <androidx.appcompat.widget.AppCompatButton
+            android:background="@drawable/ic_baseline_find_in_page_24"
+            android:textColor="#020202"
+            android:id="@+id/btnFind"
+            android:layout_marginEnd="@dimen/_30sdp"
+            android:layout_marginBottom="@dimen/_65sdp"
             android:layout_alignParentBottom="true"
             android:layout_alignParentRight="true"
             android:layout_width="@dimen/_30sdp"

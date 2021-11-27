@@ -24,6 +24,7 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.*
 import android.widget.AdapterView.OnItemClickListener
@@ -59,9 +60,10 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
     private var m_filterOptionsContainer: LinearLayout? = null
     private var m_useFilteringCheckbox: CheckBox? = null
     var createRoute: TextView
-    var layout_time : LinearLayout
+    var layout_time: LinearLayout
     var tv_time: TextView
     var btnGps: Button
+    var btnFind: Button
     private var m_mapRoute: MapRoute? = null
     private val m_tap_marker: MapScreenMarker? = null
     private val m_map_markers = LinkedList<MapMarker>()
@@ -87,7 +89,7 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
             ) {
                 return
             }
-            if (createRoute == null){
+            if (createRoute == null) {
                 layout_time.visibility = View.INVISIBLE
             } else {
                 layout_time.visibility = View.VISIBLE
@@ -110,7 +112,7 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
                             e.printStackTrace()
                         }
                         val marker2 = MapMarker(n_map!!.center, marker_img2)
-                        n_map!!.removeAllMapObjects()
+                        n_map!!.removeMapObject(marker2)
                         marker2.isDraggable = true
                         n_map!!.addMapObject(marker2)
                         n_map!!.zoomLevel = 11.0
@@ -228,6 +230,9 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
                 detailsRequest!!.execute { p0, p1 ->
                     if (p1 == ErrorCode.NONE) {
                         handlePlace(p0!!)
+                        m_resultsListView!!.visibility = View.INVISIBLE
+                        m_mapFragmentContainer!!.visibility = View.VISIBLE
+
                     } else {
                         handleError(p1!!)
                     }
@@ -285,90 +290,92 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
         }
         marker = MapMarker(m_map!!.center, m_marker_image!!)
         m_map!!.addMapObject(marker!!)
-
-        btnGps.setOnClickListener { }
-
-        val coreRouter = CoreRouter()
-
-        val routePlan = RoutePlan()
-
-        val routeOptions = RouteOptions()
-        routeOptions.transportMode =
-            RouteOptions.TransportMode.CAR
-        routeOptions.setHighwaysAllowed(false)
-        routeOptions.routeType =
-            RouteOptions.Type.SHORTEST
-        routeOptions.routeType =
-            RouteOptions.Type.FASTEST
-        routeOptions.routeCount = 2
-        routePlan.routeOptions = routeOptions
-
-        val startPoint = RouteWaypoint(GeoCoordinate(
-            place.location!!.coordinate!!))
-        val locationManager =
-            m_activity.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        if (ActivityCompat.checkSelfPermission(m_activity,
-                Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-                m_activity,
-                Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED
-        ) {
-            return
-        }
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0f,
-            (this as LocationListener))
-        val location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-        val destination = RouteWaypoint(GeoCoordinate(location!!.latitude, location!!.longitude))
-
-        routePlan.addWaypoint(startPoint)
-        routePlan.addWaypoint(destination)
-
-
-        coreRouter.calculateRoute(
-            routePlan,
-            object : Router.Listener<List<RouteResult>, RoutingError> {
-                override fun onProgress(i: Int) {
-                }
-                override fun onCalculateRouteFinished(p0: List<RouteResult>?, p1: RoutingError) {
-                    if (p1 == RoutingError.NONE) {
-//                        m_map!!.removeMapObject(m_mapRoute!!)
-                        if (p0!![0].route != null) {
-
-                            m_mapRoute = MapRoute(p0[0]!!.route)
-                            m_mapRoute!!.isManeuverNumberVisible =
-                                true
-
-                            m_map!!.addMapObject(m_mapRoute!!)
-
-                            //-------------------------------------
-                            val a = m_mapRoute!!.route!!.length.toString()
-                            createRoute.text =  "Khoảng cách $a m"
-//                            val tv_times = m_mapRoute!!.route!!.getRouteElementsFromDuration(
-//                                m_mapRoute!!.route!!.length.toLong())
-//                            tv_time.text = tv_times.toString()
-                            val gbb = p0[0]!!.route
-                                .boundingBox
-                            m_map!!.zoomTo(gbb!!, Map.Animation.NONE,
-                                Map.MOVE_PRESERVE_ORIENTATION)
-                        } else {
-                            Toast.makeText(m_activity,
-                                "Error:route results returned is not valid",
-                                Toast.LENGTH_LONG).show()
-                        }
-                    } else {
-                        Toast.makeText(m_activity,
-                            "Error:route calculation returned error code: $p1",
-                            Toast.LENGTH_LONG).show()
-                    }
-                }
-            })
-
-        //------------------------------------------------------------------------------------------------
+        m_map!!.zoomLevel = 11.0
         sb.append("Tên: ").append("""
     ${place.name}
     
     """.trimIndent())
-        sb.append("Alternative name:").append(place.alternativeNames)
-        showMessage("Vị Trí", sb.toString(), false)
+        showMessage("", sb.toString(), false)
+        btnFind.setOnClickListener {
+            val coreRouter = CoreRouter()
+
+            val routePlan = RoutePlan()
+
+            val routeOptions = RouteOptions()
+            routeOptions.transportMode =
+                RouteOptions.TransportMode.CAR
+            routeOptions.setHighwaysAllowed(false)
+            routeOptions.routeType =
+                RouteOptions.Type.SHORTEST
+            Log.d("hi","${routeOptions.routeType}")
+            routeOptions.routeCount = 2
+
+
+            val startPoint = RouteWaypoint(GeoCoordinate(
+                place.location!!.coordinate!!))
+            val locationManager =
+                m_activity.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            if (ActivityCompat.checkSelfPermission(m_activity,
+                    Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                    m_activity,
+                    Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED
+            ) {
+                return@setOnClickListener
+            }
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0f,
+                (this as LocationListener))
+            val location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+            val destination =
+                RouteWaypoint(GeoCoordinate(location!!.latitude, location!!.longitude))
+            routePlan.routeOptions = routeOptions
+            routePlan.addWaypoint(startPoint)
+            routePlan.addWaypoint(destination)
+
+
+            coreRouter.calculateRoute(
+                routePlan,
+                object : Router.Listener<List<RouteResult>, RoutingError> {
+                    override fun onProgress(i: Int) {
+                    }
+
+                    override fun onCalculateRouteFinished(
+                        p0: List<RouteResult>?,
+                        p1: RoutingError,
+                    ) {
+                        if (p1 == RoutingError.NONE) {
+//                        m_map!!.removeMapObject(m_mapRoute!!)
+                            if (p0!![0].route != null) {
+                                var route : Route
+                                m_mapRoute = MapRoute(p0[0]!!.route)
+                                m_mapRoute!!.isManeuverNumberVisible = true
+                                m_map!!.addMapObject(m_mapRoute!!)
+                                m_mapRoute!!.color = R.color.black
+                                val timeInSeconds =
+                                    p0[0].route.getTtaExcludingTraffic(Route.WHOLE_ROUTE)!!
+                                        .duration
+                                tv_time.text = timeInSeconds.toString()
+                                val a = m_mapRoute!!.route!!.length.toString()
+                                createRoute.text = "Khoảng cách $a m"
+                                val gbb = p0[0]!!.route
+                                    .boundingBox
+                                m_map!!.zoomTo(gbb!!, Map.Animation.NONE,
+                                    Map.MOVE_PRESERVE_ORIENTATION)
+                            } else {
+                                Toast.makeText(m_activity,
+                                    "Error:route results returned is not valid",
+                                    Toast.LENGTH_LONG).show()
+                            }
+                        } else {
+                            Toast.makeText(m_activity,
+                                "Error:route calculation returned error code: $p1",
+                                Toast.LENGTH_LONG).show()
+                        }
+                    }
+                })
+
+
+        }
+
     }
 
     private fun handleError(errorCode: ErrorCode) {
@@ -459,6 +466,7 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
         tv_time = m_activity.findViewById(R.id.tv_time)
         layout_time = m_activity.findViewById(R.id.layout_time)
         btnGps = m_activity.findViewById(R.id.btnGps)
+        btnFind = m_activity.findViewById(R.id.btnFind)
         initMapFragment()
         initControls()
     }
