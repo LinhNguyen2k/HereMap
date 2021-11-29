@@ -11,11 +11,11 @@ import android.widget.Toast
 import androidx.core.app.ActivityCompat
 
 class MainActivity : AppCompatActivity() {
-//    var imageView: ImageView? = null
     private var m_mapFragmentView: MapFragmentView? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        supportActionBar?.hide()
         if (hasPermissions(this, *RUNTIME_PERMISSIONS)) {
             setupMapFragmentView()
         } else {
@@ -34,10 +34,6 @@ class MainActivity : AppCompatActivity() {
                 while (index < permissions.size) {
                     if (grantResults[index] != PackageManager.PERMISSION_GRANTED) {
 
-                        /*
-                         * If the user turned down the permission request in the past and chose the
-                         * Don't ask again option in the permission request system dialog.
-                         */
                         if (!ActivityCompat
                                 .shouldShowRequestPermissionRationale(this, permissions[index])
                         ) {
@@ -59,8 +55,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupMapFragmentView() {
-        // All permission requests are being handled. Create map fragment view. Please note
-        // the HERE Mobile SDK requires all permissions defined above to operate properly.
         m_mapFragmentView = MapFragmentView(this)
     }
 

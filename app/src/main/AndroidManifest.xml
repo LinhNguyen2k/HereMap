@@ -16,6 +16,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Heremap">
         <activity
+            android:screenOrientation="portrait"
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>

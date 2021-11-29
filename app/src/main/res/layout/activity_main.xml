@@ -62,9 +62,9 @@
             android:orientation="horizontal">
 
             <LinearLayout
-                android:background="#777878"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
+                android:background="#777878"
                 android:orientation="vertical">
 
                 <TextView
@@ -79,16 +79,16 @@
                     android:id="@+id/tv_time"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textColor="#FFFFFF"
                     android:layout_toLeftOf="@id/createRoute"
+                    android:textColor="#FFFFFF"
                     android:textSize="13dp" />
             </LinearLayout>
 
             <LinearLayout
-                android:background="#777878"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
                 android:layout_alignParentEnd="true"
+                android:background="#777878"
                 android:orientation="vertical">
 
                 <TextView
@@ -99,11 +99,11 @@
                     android:textSize="13dp" />
 
                 <TextView
-                    android:textColor="#FFFFFF"
                     android:id="@+id/tv_time2"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_toLeftOf="@id/createRoute2"
+                    android:textColor="#FFFFFF"
                     android:textSize="13dp" />
             </LinearLayout>
 
@@ -144,8 +144,8 @@
                 android:background="@drawable/ic_baseline_find_in_page_24"
                 android:textColor="#020202" />
         </androidx.cardview.widget.CardView>
+
         <androidx.cardview.widget.CardView
-            android:visibility="invisible"
             android:id="@+id/cardView_btnSwap"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -153,6 +153,7 @@
             android:layout_alignParentBottom="true"
             android:layout_marginEnd="30dp"
             android:layout_marginBottom="140dp"
+            android:visibility="invisible"
             app:cardCornerRadius="10dp">
 
             <androidx.appcompat.widget.AppCompatButton

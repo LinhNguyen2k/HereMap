@@ -62,7 +62,7 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
     private var m_resultsListView: ListView? = null
     private var m_filterOptionsContainer: LinearLayout? = null
     private var m_useFilteringCheckbox: CheckBox? = null
-    private var lastLocation: LatLng? = null
+    private var startLocation: LatLng? = null
     private var endPoint: LatLng? = null
     var createRoute: TextView
     var layout_time: RelativeLayout
@@ -72,10 +72,12 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
     var btnGps: Button
     var cardView_btnSwap: CardView
     var btnFind: Button
-    var btnSwap : Button
+    var btnSwap: Button
     var isFirstClick: Boolean = true
     private var m_mapRoute: MapRoute? = null
     private val m_mapObjectList = ArrayList<MapObject>()
+    private val m_Route = ArrayList<MapObject>()
+    private val m_mapPoint = ArrayList<MapObject>()
     private val mapFragment: AndroidXMapFragment?
         private get() = m_activity.supportFragmentManager.findFragmentById(R.id.mapfragment) as AndroidXMapFragment?
 
@@ -101,15 +103,24 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
                 (this as LocationListener))
             val location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
 
-            lastLocation = LatLng(location!!.latitude,location!!.longitude)
+            startLocation = LatLng(location!!.latitude, location!!.longitude)
 
             btnSwap.setOnClickListener {
-                var temp = lastLocation
-                lastLocation = endPoint
+                var temp = startLocation
+                startLocation = endPoint
                 endPoint = temp
-                var geo  = GeoCoordinate(endPoint!!.latitude,endPoint!!.longitude)
-                getLocation(geo,1,true)
-                getLocation(geo,0,false)
+                if (m_Route != null) {
+                    m_map!!.removeMapObjects(m_Route)
+                    m_Route.clear()
+                }
+                var geo = GeoCoordinate(endPoint!!.latitude, endPoint!!.longitude)
+                getLocation(geo, 1, true)
+                getLocation(geo, 0, false)
+                if (startLocation != LatLng(location!!.latitude, location!!.longitude)) {
+                    var temp = startLocation
+                    startLocation = endPoint
+                    endPoint = temp
+                }
             }
             m_mapFragment!!.init { error ->
                 if (error == OnEngineInitListener.Error.NONE) {
@@ -129,7 +140,14 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
                         override fun onLongPressEvent(p0: PointF): Boolean {
                             val geo = m_map!!.pixelToGeo(p0)
                             drawGeo(geo!!)
-
+                            if (m_Route != null) {
+                                m_map!!.removeMapObjects(m_Route)
+                                m_Route.clear()
+                            }
+                            if (m_mapPoint != null) {
+                                m_map!!.removeMapObjects(m_mapPoint)
+                                m_mapPoint.clear()
+                            }
                             return false
                         }
                     }, 100, true)
@@ -142,16 +160,15 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
         }
     }
 
-
     fun drawGeo(position: GeoCoordinate) {
         val request = ReverseGeocodeRequest(position)
         request.execute(ResultListener<com.here.android.mpa.search.Location> { location: com.here.android.mpa.search.Location?, errorCode: ErrorCode ->
             var address = location!!.address
             AlertDialog.Builder(m_activity)
                 .setTitle(address!!.text)
-                .setMessage("lat: ${position.latitude} \n long: ${position.longitude} \n ${
+                .setMessage(" Lat: ${position.latitude} \n Long: ${position.longitude}\n${
                     location!!.address
-                }") .setPositiveButton(
+                }").setPositiveButton(
                     "Di chuyển đến"
                 ) { _, _ ->
                     endPoint = LatLng(position.latitude, position.longitude)
@@ -160,8 +177,8 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
                         m_mapObjectList.removeAt(m_mapObjectList.size - 1)
                     }
                     setMarker(position.latitude, position.longitude)
-                    getLocation(position,1,true)
-                    getLocation(position,0,false)
+                    getLocation(position, 1, true)
+                    getLocation(position, 0, false)
                     layout_time.visibility = View.VISIBLE
                 }
                 .setNegativeButton("OK") { _, _ ->
@@ -199,6 +216,7 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
             e.printStackTrace()
         }
         val marker2 = MapMarker(m_map!!.center, marker_img2)
+        m_map!!.removeMapObject(marker2)
         m_map!!.addMapObject(marker2)
         m_mapObjectList.add(marker2)
         m_map!!.zoomLevel = 11.0
@@ -218,9 +236,15 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
         m_resultsListView!!.onItemClickListener =
             OnItemClickListener { parent, view, position, id ->
                 val item = parent.getItemAtPosition(position) as AutoSuggest
-                if (m_mapRoute != null) {
-                    clearMap()
+                if (m_Route != null) {
+                    m_map!!.removeMapObjects(m_Route)
+                    m_Route.clear()
                 }
+                while (m_mapObjectList.size > 1) {
+                    m_map!!.removeMapObject(m_mapObjectList[m_mapObjectList.size - 1])
+                    m_mapObjectList.removeAt(m_mapObjectList.size - 1)
+                }
+                cardView_btnSwap.visibility = View.INVISIBLE
                 handleSelectedAutoSuggest(item)
             }
         // Initialize filter options view
@@ -314,7 +338,8 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
                 val detailsRequest = autoSuggestPlace.placeDetailsRequest
                 detailsRequest!!.execute { p0, p1 ->
                     if (p1 == ErrorCode.NONE) {
-                        endPoint = LatLng(p0!!.location!!.coordinate!!.latitude, p0!!.location!!.coordinate!!.longitude)
+                        endPoint = LatLng(p0!!.location!!.coordinate!!.latitude,
+                            p0!!.location!!.coordinate!!.longitude)
                         handlePlace(p0!!.location!!.coordinate!!)
                         setSearchMode(false)
 
@@ -335,10 +360,6 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
                         handleError(p1!!)
                     }
                 }
-            }
-            AutoSuggest.Type.UNKNOWN -> {
-            }
-            else -> {
             }
         }
     }
@@ -369,14 +390,17 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
             e.printStackTrace()
         }
         marker = MapMarker(m_map!!.center, m_marker_image!!)
+        m_map!!.removeMapObject(marker!!)
         m_map!!.addMapObject(marker!!)
-        m_mapObjectList.add(marker!!)
+        m_mapPoint.add(marker!!)
         m_map!!.zoomLevel = 11.0
         btnFind.setOnClickListener {
             showDialog(place)
+            cardView_btnSwap.visibility = View.VISIBLE
         }
 
     }
+
     // Xóa giữ liệu chỉ lấy 1 điểm đánh dấu
     private fun getLocation(place: GeoCoordinate, count: Int, isCheck: Boolean) {
         val routePlan = RoutePlan()
@@ -390,7 +414,7 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
         routePlan.routeOptions = routeOptions
         val destination = RouteWaypoint(place)
         val startPoint =
-            RouteWaypoint(GeoCoordinate(lastLocation!!.latitude, lastLocation!!.longitude))
+            RouteWaypoint(GeoCoordinate(startLocation!!.latitude, startLocation!!.longitude))
 
         routePlan.addWaypoint(startPoint)
         routePlan.addWaypoint(destination)
@@ -416,7 +440,7 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
                                 val timeInHours: Int =
                                     ((p0[0].route.getTtaExcludingTraffic(Route.WHOLE_ROUTE)!!
                                         .duration))
-                                    tv_time.text = "Thời gian:  ${formatTime(timeInHours)}"
+                                tv_time.text = "Thời gian:  ${formatTime(timeInHours)}"
 
                                 val a = ((m_mapRoute!!.route!!.length).toDouble() / 1000)
                                 createRoute.text = "Khoảng cách ${df.format(a)} km"
@@ -433,7 +457,7 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
                             m_map!!.addMapObject(m_mapRoute!!)
                             val gbb = p0[0]!!.route.boundingBox
                             m_map!!.zoomTo(gbb!!, Map.Animation.NONE, Map.MOVE_PRESERVE_ORIENTATION)
-                            m_mapObjectList.add(m_mapRoute!!)
+                            m_Route.add(m_mapRoute!!)
                             cardView_btnSwap.visibility = View.VISIBLE
                         } else {
                             Toast.makeText(m_activity,
@@ -508,7 +532,7 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
 //        initMapFragment()
     }
 
-    private fun formatTime(second : Int) : String{
+    private fun formatTime(second: Int): String {
         var result = ""
         var second = second
         val hours = second / 3600
@@ -524,6 +548,7 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
 
         return result
     }
+
     companion object {
         var s_discoverResultList: List<DiscoveryResult>? = null
         private var m_marker_image: Image? = null
