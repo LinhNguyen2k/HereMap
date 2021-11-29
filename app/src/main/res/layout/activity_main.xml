@@ -144,6 +144,24 @@
                 android:background="@drawable/ic_baseline_find_in_page_24"
                 android:textColor="#020202" />
         </androidx.cardview.widget.CardView>
+        <androidx.cardview.widget.CardView
+            android:visibility="invisible"
+            android:id="@+id/cardView_btnSwap"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_alignParentBottom="true"
+            android:layout_marginEnd="30dp"
+            android:layout_marginBottom="140dp"
+            app:cardCornerRadius="10dp">
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnSwap"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/ic_baseline_swap_vert_24"
+                android:textColor="#020202" />
+        </androidx.cardview.widget.CardView>
     </RelativeLayout>
 
 </LinearLayout>
