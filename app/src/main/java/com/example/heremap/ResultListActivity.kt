@@ -37,11 +37,6 @@ class ResultListActivity : ListActivity() {
     }
 
     private fun initUIElements() {
-        /*
-         * An overlay layout will pop up to display some place details.To simplify the logic, this
-         * layout is currently not being handled for screen rotation event.It disappears if the
-         * screen is being rotated.
-         */
         m_placeDetailLayout = findViewById<View>(R.id.placeDetailLayout) as LinearLayout
         m_placeDetailLayout!!.visibility = View.GONE
         m_placeName = findViewById<View>(R.id.placeName) as TextView
@@ -54,19 +49,14 @@ class ResultListActivity : ListActivity() {
         }
     }
 
-    /* Retrieve details of the place selected */
     public override fun onListItemClick(l: ListView, v: View, position: Int, id: Long) {
         val result = MapFragmentView.s_discoverResultList!![position]
         if (result.resultType == DiscoveryResult.ResultType.PLACE) {
-            /* Fire the PlaceRequest */
             val placeLink = result as PlaceLink
             val placeRequest = placeLink.detailsRequest
             placeRequest!!.execute(m_placeResultListener)
         } else if (result.resultType == DiscoveryResult.ResultType.DISCOVERY) {
-            /*
-             * Another DiscoveryRequest object can be obtained by calling DiscoveryLink.getRequest()
-             */
-            Toast.makeText(this, "This is a DiscoveryLink result", Toast.LENGTH_SHORT).show()
+
         }
     }
 
@@ -74,11 +64,7 @@ class ResultListActivity : ListActivity() {
 
         override fun onCompleted(place: Place?, errorCode: ErrorCode?) {
             if (errorCode == ErrorCode.NONE) {
-                /*
-                 * No error returned,let's show the name and location of the place that just being
-                 * selected.Additional place details info can be retrieved at this moment as well,
-                 * please refer to the HERE Android SDK API doc for details.
-                 */
+
                 m_placeDetailLayout!!.visibility = View.VISIBLE
                 m_placeName!!.text = place!!.name
                 val geoCoordinate = place.location!!

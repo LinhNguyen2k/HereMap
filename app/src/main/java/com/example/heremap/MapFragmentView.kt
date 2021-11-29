@@ -18,19 +18,24 @@ package com.example.heremap
 import android.Manifest
 import android.app.AlertDialog
 import android.content.Context
+import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
+import android.graphics.PointF
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.widget.*
 import android.widget.AdapterView.OnItemClickListener
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import androidx.core.view.isNotEmpty
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.Marker
 import com.here.android.mpa.common.*
 import com.here.android.mpa.mapping.*
 import com.here.android.mpa.mapping.Map
@@ -40,17 +45,14 @@ import com.here.android.mpa.search.TextAutoSuggestionRequest.AutoSuggestFilterTy
 import java.io.File
 import java.io.IOException
 import java.lang.StringBuilder
+import java.text.DecimalFormat
 import java.util.*
+import kotlin.collections.ArrayList
 
-/**
- * This class encapsulates the properties and functionality of the Map view. It also implements 3
- * types of AutoSuggest requests that HERE Mobile SDK for Android (Premium) provides as example.
- */
 class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListener {
     private var m_mapFragment: AndroidXMapFragment? = null
     private var m_mapFragmentContainer: View? = null
     private var m_map: Map? = null
-    private var q_map: Map? = null
     private var n_map: Map? = null
     private var m_searchView: SearchView? = null
     private val m_searchListener: SearchListener
@@ -59,25 +61,28 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
     private var m_resultsListView: ListView? = null
     private var m_filterOptionsContainer: LinearLayout? = null
     private var m_useFilteringCheckbox: CheckBox? = null
+    private var lastLocation: LatLng? = null
+    private var endPoint: LatLng? = null
     var createRoute: TextView
-    var layout_time: LinearLayout
+    var layout_time: RelativeLayout
     var tv_time: TextView
+    var tv_time2: TextView
+    var tv_route2: TextView
     var btnGps: Button
     var btnFind: Button
+    var isFirstClick: Boolean = true
     private var m_mapRoute: MapRoute? = null
-    private val m_tap_marker: MapScreenMarker? = null
-    private val m_map_markers = LinkedList<MapMarker>()
+    private val m_mapObjectList = ArrayList<MapObject>()
     private val mapFragment: AndroidXMapFragment?
         private get() = m_activity.supportFragmentManager.findFragmentById(R.id.mapfragment) as AndroidXMapFragment?
 
     private fun initMapFragment() {
         m_mapFragment = mapFragment
         m_mapFragmentContainer = m_activity.findViewById(R.id.mapfragment)
-
+        layout_time.visibility = View.INVISIBLE
         val path = File(m_activity.getExternalFilesDir(null), ".here-map-data")
             .absolutePath
         MapSettings.setDiskCacheRootPath(path)
-
 
         if (m_mapFragment != null) {
             val locationManager =
@@ -89,37 +94,87 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
             ) {
                 return
             }
-            if (createRoute == null) {
-                layout_time.visibility = View.INVISIBLE
-            } else {
-                layout_time.visibility = View.VISIBLE
-            }
             locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0f,
                 (this as LocationListener))
             val location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
             m_mapFragment!!.init { error ->
                 if (error == OnEngineInitListener.Error.NONE) {
+                    loadGPS(location!!)
+                    m_mapFragment!!.mapGesture!!.addOnGestureListener(object :
+                        MapGesture.OnGestureListener.OnGestureListenerAdapter() {
+                        override fun onTapEvent(p0: PointF): Boolean {
+                            val geo = m_map!!.pixelToGeo(p0)
+                            if (!isFirstClick)
+                                dropMarker()
+                            isFirstClick = false
+                            setMarker(geo!!.latitude, geo!!.longitude)
+                            return false
+                        }
+
+//                        override fun onLongPressEvent(p0: Place): Boolean {
+//                            val geo = m_map!!.pixelTop0)
+//                            reverseGeocode(geo!!,geo!! as Place)
+//                            return false
+//                        }
+                    }, 100, true)
                     m_map = m_mapFragment!!.map
                     btnGps.setOnClickListener {
-                        n_map = m_mapFragment!!.map
-                        n_map!!.setCenter(GeoCoordinate(location!!.latitude,
-                            location.longitude),
-                            Map.Animation.NONE)
-                        val marker_img2 = Image()
-                        try {
-                            marker_img2.setImageResource(R.drawable.imagegps)
-                        } catch (e: IOException) {
-                            e.printStackTrace()
-                        }
-                        val marker2 = MapMarker(n_map!!.center, marker_img2)
-                        n_map!!.removeMapObject(marker2)
-                        marker2.isDraggable = true
-                        n_map!!.addMapObject(marker2)
-                        n_map!!.zoomLevel = 11.0
+                        loadGPS(location!!)
                     }
                 }
             }
         }
+    }
+
+    fun reverseGeocode(position: GeoCoordinate, place: Place) {
+        val request = ReverseGeocodeRequest(position)
+        request.execute(ResultListener<com.here.android.mpa.search.Location> { location: com.here.android.mpa.search.Location?, errorCode: ErrorCode ->
+            var address = location!!.address
+            AlertDialog.Builder(m_activity)
+                .setTitle(address!!.text)
+                .setMessage("lat: ${position.latitude} \n long: ${position.longitude} \n ${
+                    location!!.address
+                }").setPositiveButton("Di chuyển đến"){ _, i ->
+                    getLocation(place,1,true)
+                    getLocation(place,0,false)
+                }.setPositiveButton("Oke"){ _: DialogInterface, i: Int ->
+                    Toast.makeText(m_activity,"oke",Toast.LENGTH_LONG).show()
+                }.show()
+        })
+    }
+
+    private fun setMarker(lat: Double, long: Double) {
+        val marker_img2 = Image()
+        marker_img2.setImageResource(R.drawable.imagegps)
+        val marker2 = MapMarker()
+        marker2.coordinate = GeoCoordinate(lat, long)
+        marker2.icon = marker_img2
+        m_map!!.addMapObject(marker2)
+        m_mapObjectList.add(marker2)
+    }
+
+    private fun dropMarker() {
+        if (m_mapObjectList.size > 1) {
+            m_map!!.removeMapObject(m_mapObjectList[m_mapObjectList.size - 1])
+            m_mapObjectList.removeAt(m_mapObjectList.size - 1)
+        }
+    }
+
+    private fun loadGPS(location: Location) {
+        m_map = m_mapFragment!!.map
+        m_map!!.setCenter(GeoCoordinate(location!!.latitude,
+            location.longitude),
+            Map.Animation.NONE)
+        val marker_img2 = Image()
+        try {
+            marker_img2.setImageResource(R.drawable.imagegps)
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
+        val marker2 = MapMarker(m_map!!.center, marker_img2)
+        m_map!!.addMapObject(marker2)
+        m_mapObjectList.add(marker2)
+        m_map!!.zoomLevel = 11.0
     }
 
     // Search view
@@ -136,6 +191,9 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
         m_resultsListView!!.onItemClickListener =
             OnItemClickListener { parent, view, position, id ->
                 val item = parent.getItemAtPosition(position) as AutoSuggest
+                if (m_mapRoute != null) {
+                    clearMap()
+                }
                 handleSelectedAutoSuggest(item)
             }
         // Initialize filter options view
@@ -230,8 +288,7 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
                 detailsRequest!!.execute { p0, p1 ->
                     if (p1 == ErrorCode.NONE) {
                         handlePlace(p0!!)
-                        m_resultsListView!!.visibility = View.INVISIBLE
-                        m_mapFragmentContainer!!.visibility = View.VISIBLE
+                        setSearchMode(false)
 
                     } else {
                         handleError(p1!!)
@@ -266,11 +323,10 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
         } else {
             m_mapFragmentContainer!!.visibility = View.VISIBLE
             m_resultsListView!!.visibility = View.INVISIBLE
-            layout_time.visibility = View.VISIBLE
+            layout_time.visibility = View.INVISIBLE
         }
     }
 
-    // Xóa giữ liệu chỉ lấy 1 điểm đánh dấu
     var marker: MapMarker? = null
     private fun handlePlace(place: Place) {
         if (marker != null) {
@@ -278,7 +334,7 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
         }
         val sb = StringBuilder()
         // lấy địa chỉ
-        sb.append("địa chỉ").append("""
+        sb.append("địa chỉ: ").append("""
     ${place.location!!.coordinate.toString()}""".trimIndent())
         m_map = m_mapFragment!!.map
         m_map!!.setCenter(GeoCoordinate(place.location!!.coordinate!!), Map.Animation.NONE)
@@ -297,85 +353,146 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
     """.trimIndent())
         showMessage("", sb.toString(), false)
         btnFind.setOnClickListener {
-            val coreRouter = CoreRouter()
-
-            val routePlan = RoutePlan()
-
-            val routeOptions = RouteOptions()
-            routeOptions.transportMode =
-                RouteOptions.TransportMode.CAR
-            routeOptions.setHighwaysAllowed(false)
-            routeOptions.routeType =
-                RouteOptions.Type.SHORTEST
-            Log.d("hi","${routeOptions.routeType}")
-            routeOptions.routeCount = 2
-
-
-            val startPoint = RouteWaypoint(GeoCoordinate(
-                place.location!!.coordinate!!))
-            val locationManager =
-                m_activity.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-            if (ActivityCompat.checkSelfPermission(m_activity,
-                    Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-                    m_activity,
-                    Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED
-            ) {
-                return@setOnClickListener
-            }
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0f,
-                (this as LocationListener))
-            val location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-            val destination =
-                RouteWaypoint(GeoCoordinate(location!!.latitude, location!!.longitude))
-            routePlan.routeOptions = routeOptions
-            routePlan.addWaypoint(startPoint)
-            routePlan.addWaypoint(destination)
-
-
-            coreRouter.calculateRoute(
-                routePlan,
-                object : Router.Listener<List<RouteResult>, RoutingError> {
-                    override fun onProgress(i: Int) {
-                    }
-
-                    override fun onCalculateRouteFinished(
-                        p0: List<RouteResult>?,
-                        p1: RoutingError,
-                    ) {
-                        if (p1 == RoutingError.NONE) {
-//                        m_map!!.removeMapObject(m_mapRoute!!)
-                            if (p0!![0].route != null) {
-                                var route : Route
-                                m_mapRoute = MapRoute(p0[0]!!.route)
-                                m_mapRoute!!.isManeuverNumberVisible = true
-                                m_map!!.addMapObject(m_mapRoute!!)
-                                m_mapRoute!!.color = R.color.black
-                                val timeInSeconds =
-                                    p0[0].route.getTtaExcludingTraffic(Route.WHOLE_ROUTE)!!
-                                        .duration
-                                tv_time.text = timeInSeconds.toString()
-                                val a = m_mapRoute!!.route!!.length.toString()
-                                createRoute.text = "Khoảng cách $a m"
-                                val gbb = p0[0]!!.route
-                                    .boundingBox
-                                m_map!!.zoomTo(gbb!!, Map.Animation.NONE,
-                                    Map.MOVE_PRESERVE_ORIENTATION)
-                            } else {
-                                Toast.makeText(m_activity,
-                                    "Error:route results returned is not valid",
-                                    Toast.LENGTH_LONG).show()
-                            }
-                        } else {
-                            Toast.makeText(m_activity,
-                                "Error:route calculation returned error code: $p1",
-                                Toast.LENGTH_LONG).show()
-                        }
-                    }
-                })
-
-
+            showDialog(place)
         }
 
+    }
+
+    // Xóa giữ liệu chỉ lấy 1 điểm đánh dấu
+    private fun getLocation(place: Place, count: Int, isCheck: Boolean) {
+        val routePlan = RoutePlan()
+        val routeOptions = RouteOptions()
+        if (count == 0) {
+            routeOptions.routeType = RouteOptions.Type.SHORTEST
+        } else {
+            routeOptions.routeType = RouteOptions.Type.FASTEST
+        }
+        routeOptions.routeCount = 1
+        routePlan.routeOptions = routeOptions
+        val startPoint = RouteWaypoint(GeoCoordinate(
+            place.location!!.coordinate!!))
+        val locationManager =
+            m_activity.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        if (ActivityCompat.checkSelfPermission(m_activity,
+                Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                m_activity,
+                Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0f,
+            (this as LocationListener))
+        val location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+        val destination =
+            RouteWaypoint(GeoCoordinate(location!!.latitude, location!!.longitude))
+
+        routePlan.addWaypoint(startPoint)
+        routePlan.addWaypoint(destination)
+        val coreRouter = CoreRouter()
+        coreRouter.calculateRoute(
+            routePlan,
+            object : Router.Listener<List<RouteResult>, RoutingError> {
+                override fun onProgress(i: Int) {
+                }
+
+                override fun onCalculateRouteFinished(
+                    p0: List<RouteResult>?,
+                    p1: RoutingError,
+                ) {
+                    if (p1 == RoutingError.NONE) {
+
+                        if (p0!![0].route != null) {
+                            m_mapRoute = MapRoute(p0[0]!!.route)
+                            m_mapRoute!!.isManeuverNumberVisible = true
+
+                            val df = DecimalFormat("#.00")
+                            if (isCheck) {
+                                m_mapRoute!!.color = Color.BLUE
+                                val timeInHours: Double =
+                                    ((p0[0].route.getTtaExcludingTraffic(Route.WHOLE_ROUTE)!!
+                                        .duration).toDouble() / 3600)
+                                if (timeInHours >= 1) {
+                                    tv_time.text = "Thời gian:  ${df.format(timeInHours)} giờ"
+                                } else {
+                                    tv_time.text = "Thời gian:  0${df.format(timeInHours)} giờ"
+                                }
+
+                                val a = ((m_mapRoute!!.route!!.length).toDouble() / 1000)
+                                createRoute.text = "Khoảng cách ${df.format(a)} km"
+
+                            } else {
+                                m_mapRoute!!.color = Color.GRAY
+                                val timeInHours: Double =
+                                    ((p0[0].route.getTtaExcludingTraffic(Route.WHOLE_ROUTE)!!
+                                        .duration).toDouble() / 3600)
+                                if (timeInHours >= 1) {
+                                    tv_time2.text = "Thời gian:  ${df.format(timeInHours)} giờ"
+                                } else {
+                                    tv_time2.text = "Thời gian:  0${df.format(timeInHours)} giờ"
+                                }
+
+                                val a = ((m_mapRoute!!.route!!.length).toDouble() / 1000)
+                                tv_route2.text = "Khoảng cách: ${df.format(a)} km"
+                            }
+                            m_map!!.addMapObject(m_mapRoute!!)
+                            val gbb = p0[0]!!.route.boundingBox
+                            m_map!!.zoomTo(gbb!!, Map.Animation.NONE, Map.MOVE_PRESERVE_ORIENTATION)
+                            m_mapObjectList.add(m_mapRoute!!)
+
+                        } else {
+                            Toast.makeText(m_activity,
+                                "Error:route results returned is not valid",
+                                Toast.LENGTH_LONG).show()
+                        }
+                    } else {
+                        Toast.makeText(m_activity,
+                            "Error:route calculation returned error code: $p1",
+                            Toast.LENGTH_LONG).show()
+                    }
+                }
+            })
+    }
+
+    private fun clearMap() {
+
+        m_map!!.removeMapObjects(m_mapObjectList)
+        m_mapObjectList.clear()
+    }
+
+    private fun showDialog(place: Place) {
+        var routeOptions = RouteOptions()
+        var routePlan = RoutePlan()
+        val tunes = arrayOf("Xe ô tô", "Xe Máy(Xe tay ga)")
+        val alertDialog: AlertDialog = AlertDialog.Builder(m_activity)
+            .setIcon(R.drawable.ic_baseline_moving_24)
+            .setTitle("Chọn phương tiện di chuyển")
+            .setSingleChoiceItems(tunes, -1)
+            { dialog, i ->
+                if (tunes[i] == "Xe ô tô") {
+                    routeOptions.transportMode =
+                        RouteOptions.TransportMode.CAR
+                    routePlan.routeOptions = routeOptions
+                    getLocation(place, 1, true)
+                    getLocation(place, 0, false)
+                    layout_time.visibility = View.VISIBLE
+                    dialog.dismiss()
+                } else {
+                    routeOptions.transportMode =
+                        RouteOptions.TransportMode.SCOOTER
+                    routePlan.routeOptions = routeOptions
+                    getLocation(place, 1, true)
+                    getLocation(place, 0, false)
+                    layout_time.visibility = View.VISIBLE
+                    dialog.dismiss()
+                }
+
+            }
+            .setNegativeButton("Hủy Bỏ"
+            ) { dialogInterface, _ ->
+                dialogInterface.cancel()
+            }
+            .create()
+        alertDialog.show()
     }
 
     private fun handleError(errorCode: ErrorCode) {
@@ -393,7 +510,7 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
         builder.setNeutralButton("OK", null)
         builder.create().show()
         setSearchMode(false)
-        initMapFragment()
+//        initMapFragment()
     }
 
     companion object {
@@ -467,6 +584,8 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
         layout_time = m_activity.findViewById(R.id.layout_time)
         btnGps = m_activity.findViewById(R.id.btnGps)
         btnFind = m_activity.findViewById(R.id.btnFind)
+        tv_time2 = m_activity.findViewById(R.id.tv_time2)
+        tv_route2 = m_activity.findViewById(R.id.createRoute2)
         initMapFragment()
         initControls()
     }

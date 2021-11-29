@@ -22,7 +22,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.TextView
 
-/*List Adapter class to be used by ResultListActivity*/
 class ResultListAdapter(
     context: Context?,
     resource: Int,
@@ -41,10 +40,6 @@ class ResultListAdapter(
                 parent, false)
         }
 
-        /*
-         * Display title and vicinity information of each result. Please refer to HERE Android SDK
-         * API doc for all supported APIs.
-         */
         var tv = convertView!!.findViewById<View>(R.id.name) as TextView
         tv.text = discoveryResult.title
         tv = convertView.findViewById<View>(R.id.vicinity) as TextView
