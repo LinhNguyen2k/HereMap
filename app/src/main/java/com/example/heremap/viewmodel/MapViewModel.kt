@@ -18,8 +18,6 @@ import java.text.DecimalFormat
 
 class MapViewModel : ViewModel() {
     var m_map: Map? = null
-    var startLocation = MutableLiveData<GeoCoordinate>()
-    var endLocation = MutableLiveData<GeoCoordinate>()
     var typeVehicle = MutableLiveData<Int>()
     var result_time1 = MutableLiveData<String>()
     var result_time2 = MutableLiveData<String>()
@@ -39,7 +37,6 @@ class MapViewModel : ViewModel() {
         result_distance2.value = ""
 
     }
-
 
     fun setTypeVehicle(type: Int) {
         typeVehicle.value = type
@@ -133,9 +130,7 @@ class MapViewModel : ViewModel() {
     }
 
     fun loadGPS(location: Location) {
-        m_map!!.setCenter(GeoCoordinate(location!!.latitude,
-            location.longitude),
-            Map.Animation.NONE)
+        m_map!!.setCenter(GeoCoordinate(location.latitude, location.longitude), Map.Animation.NONE)
         val marker_img2 = Image()
         try {
             marker_img2.setImageResource(R.drawable.imagegps)

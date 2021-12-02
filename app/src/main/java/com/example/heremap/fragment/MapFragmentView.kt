@@ -57,7 +57,7 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
     var isFirstClick: Boolean = true
     private val m_mapPoint = ArrayList<MapObject>()
     private val mapFragment: AndroidXMapFragment?
-        private get() = m_activity.supportFragmentManager.findFragmentById(R.id.mapfragment) as AndroidXMapFragment?
+        get() = m_activity.supportFragmentManager.findFragmentById(R.id.mapfragment) as AndroidXMapFragment?
     private val mapViewModel by lazy {
         ViewModelProvider(m_activity).get(MapViewModel::class.java)
     }
@@ -77,27 +77,25 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
                     Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
                     m_activity,
                     Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED
-            ) {
-                return
-            }
+            ) return
             locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0f,
                 (this as LocationListener))
             val location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
 
             btnSwap.setOnClickListener {
-                var temp = mapViewModel.startPoint
+                val temp = mapViewModel.startPoint
                 mapViewModel.startPoint = mapViewModel.endPoint
                 mapViewModel.endPoint = temp
                 if (mapViewModel.m_Route != null) {
                     m_map!!.removeMapObjects(mapViewModel.m_Route)
                     mapViewModel.m_Route.clear()
                 }
-                var geo = GeoCoordinate(mapViewModel.endPoint!!.latitude,
+                val geo = GeoCoordinate(mapViewModel.endPoint!!.latitude,
                     mapViewModel.endPoint!!.longitude)
                 mapViewModel.getLocation(geo, 1, true)
                 mapViewModel.getLocation(geo, 0, false)
                 if (mapViewModel.startPoint != LatLng(location!!.latitude, location.longitude)) {
-                    var temp = mapViewModel.startPoint
+                    val temp = mapViewModel.startPoint
                     mapViewModel.startPoint = mapViewModel.endPoint
                     mapViewModel.endPoint = temp
                 }
@@ -138,7 +136,7 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
                     }, 100, true)
                     m_map = m_mapFragment!!.map
                     btnGps.setOnClickListener {
-                        mapViewModel.loadGPS(location!!)
+                        mapViewModel.loadGPS(location)
                     }
                 }
             }
@@ -167,11 +165,11 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
     fun drawGeo(position: GeoCoordinate) {
         val request = ReverseGeocodeRequest(position)
         request.execute { location: com.here.android.mpa.search.Location?, errorCode: ErrorCode ->
-            var address = location!!.address
+            val address = location!!.address
             AlertDialog.Builder(m_activity)
                 .setTitle(address!!.text)
                 .setMessage(" Lat: ${position.latitude} \n Long: ${position.longitude}\n${
-                    location!!.address
+                    location.address
                 }").setPositiveButton(
                     "Di chuyển đến"
                 ) { _, _ ->
@@ -191,6 +189,7 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
                 .show()
         }
     }
+
     private fun initControls() {
         m_searchView = m_activity.findViewById(R.id.search)
         m_searchView!!.setOnQueryTextListener(m_searchListener)
@@ -360,9 +359,10 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
             cardView_btnSwap.visibility = View.VISIBLE
         }
     }
+
     private fun showDialog(place: GeoCoordinate) {
-        var routeOptions = RouteOptions()
-        var routePlan = RoutePlan()
+        val routeOptions = RouteOptions()
+        val routePlan = RoutePlan()
         val tunes = arrayOf("Xe ô tô", "Xe Máy(Xe tay ga)")
         val alertDialog: AlertDialog = AlertDialog.Builder(m_activity)
             .setIcon(R.drawable.ic_baseline_moving_24)
@@ -397,6 +397,7 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
         var s_discoverResultList: List<DiscoveryResult>? = null
         private var m_marker_image: Image? = null
     }
+
     init {
         m_searchListener = SearchListener()
         m_autoSuggests = ArrayList()
