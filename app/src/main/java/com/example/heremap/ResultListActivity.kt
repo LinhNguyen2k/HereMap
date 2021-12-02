@@ -19,6 +19,8 @@ import android.app.ListActivity
 import android.os.Bundle
 import android.view.View
 import android.widget.*
+import com.example.heremap.adapter.ResultListAdapter
+import com.example.heremap.fragment.MapFragmentView
 
 import com.here.android.mpa.search.*
 

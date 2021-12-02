@@ -6,9 +6,9 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.widget.ImageView
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
+import com.example.heremap.fragment.MapFragmentView
 
 class MainActivity : AppCompatActivity() {
     private var m_mapFragmentView: MapFragmentView? = null

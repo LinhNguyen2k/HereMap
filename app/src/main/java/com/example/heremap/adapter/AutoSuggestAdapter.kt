@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.example.heremap
+package com.example.heremap.adapter
 
 import android.content.Context
 import android.graphics.Color
@@ -24,6 +24,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.TextView
 import androidx.core.text.HtmlCompat
+import com.example.heremap.R
 import com.here.android.mpa.search.AutoSuggestPlace
 import com.here.android.mpa.search.AutoSuggestQuery
 import com.here.android.mpa.search.AutoSuggestSearch

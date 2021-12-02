@@ -1,24 +1,8 @@
-/*
- * Copyright (c) 2011-2020 HERE Europe B.V.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-package com.example.heremap
+package com.example.heremap.fragment
 
 import android.Manifest
 import android.app.AlertDialog
 import android.content.Context
-import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
@@ -33,20 +17,19 @@ import android.widget.AdapterView.OnItemClickListener
 import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
 import androidx.core.app.ActivityCompat
-import androidx.fragment.app.Fragment
-import androidx.fragment.app.FragmentManager
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.Marker
+import androidx.lifecycle.ViewModelProvider
+import com.example.heremap.R
+import com.example.heremap.ResultListActivity
+import com.example.heremap.adapter.AutoSuggestAdapter
+import com.example.heremap.viewmodel.MapViewModel
 import com.here.android.mpa.common.*
 import com.here.android.mpa.mapping.*
 import com.here.android.mpa.mapping.Map
 import com.here.android.mpa.routing.*
 import com.here.android.mpa.search.*
 import com.here.android.mpa.search.TextAutoSuggestionRequest.AutoSuggestFilterType
-import com.nokia.maps.p1
 import java.io.File
 import java.io.IOException
-import java.lang.StringBuilder
 import java.text.DecimalFormat
 import java.util.*
 import kotlin.collections.ArrayList
@@ -62,8 +45,9 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
     private var m_resultsListView: ListView? = null
     private var m_filterOptionsContainer: LinearLayout? = null
     private var m_useFilteringCheckbox: CheckBox? = null
-    private var startLocation: LatLng? = null
-    private var endPoint: LatLng? = null
+    private var endLocation: GeoCoordinate? = null
+    private var startLocations: GeoCoordinate? = null
+    private var typeVehicle: Int? = null
     var createRoute: TextView
     var layout_time: RelativeLayout
     var tv_time: TextView
@@ -80,6 +64,9 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
     private val m_mapPoint = ArrayList<MapObject>()
     private val mapFragment: AndroidXMapFragment?
         private get() = m_activity.supportFragmentManager.findFragmentById(R.id.mapfragment) as AndroidXMapFragment?
+    private val mapViewModel by lazy {
+        ViewModelProvider(m_activity).get(MapViewModel::class.java)
+    }
 
     private fun initMapFragment() {
         m_mapFragment = mapFragment
@@ -103,28 +90,31 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
                 (this as LocationListener))
             val location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
 
-            startLocation = LatLng(location!!.latitude, location!!.longitude)
+
 
             btnSwap.setOnClickListener {
-                var temp = startLocation
-                startLocation = endPoint
-                endPoint = temp
+                var temp = startLocations
+                mapViewModel.setStartLocation(endLocation!!)
+                mapViewModel.setEndLocation(temp!!)
                 if (m_Route != null) {
                     m_map!!.removeMapObjects(m_Route)
                     m_Route.clear()
                 }
-                var geo = GeoCoordinate(endPoint!!.latitude, endPoint!!.longitude)
+                var geo = GeoCoordinate(endLocation!!.latitude, endLocation!!.longitude)
                 getLocation(geo, 1, true)
                 getLocation(geo, 0, false)
-                if (startLocation != LatLng(location!!.latitude, location!!.longitude)) {
-                    var temp = startLocation
-                    startLocation = endPoint
-                    endPoint = temp
+                if (startLocations != GeoCoordinate(location!!.latitude, location!!.longitude)) {
+                    var temp = startLocations
+                    mapViewModel.setStartLocation(endLocation!!)
+                    mapViewModel.setEndLocation(temp!!)
                 }
             }
             m_mapFragment!!.init { error ->
                 if (error == OnEngineInitListener.Error.NONE) {
+                    mapViewModel.setStartLocation(GeoCoordinate(location!!.latitude,
+                        location!!.longitude))
                     loadGPS(location!!)
+                    observe()
                     m_mapFragment!!.mapGesture!!.addOnGestureListener(object :
                         MapGesture.OnGestureListener.OnGestureListenerAdapter() {
                         override fun onTapEvent(p0: PointF): Boolean {
@@ -140,6 +130,7 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
                         override fun onLongPressEvent(p0: PointF): Boolean {
                             val geo = m_map!!.pixelToGeo(p0)
                             drawGeo(geo!!)
+                            endLocation = geo
                             if (m_Route != null) {
                                 m_map!!.removeMapObjects(m_Route)
                                 m_Route.clear()
@@ -160,9 +151,25 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
         }
     }
 
+    private fun observe() {
+        mapViewModel.startLocation.observe(m_activity, {
+            startLocations = it
+        })
+
+        mapViewModel.endLocation.observe(m_activity, {
+            endLocation = it
+        })
+
+        mapViewModel.typeVehicle.observe(m_activity, {
+            typeVehicle = it
+        })
+
+
+    }
+
     fun drawGeo(position: GeoCoordinate) {
         val request = ReverseGeocodeRequest(position)
-        request.execute(ResultListener<com.here.android.mpa.search.Location> { location: com.here.android.mpa.search.Location?, errorCode: ErrorCode ->
+        request.execute { location: com.here.android.mpa.search.Location?, errorCode: ErrorCode ->
             var address = location!!.address
             AlertDialog.Builder(m_activity)
                 .setTitle(address!!.text)
@@ -171,7 +178,7 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
                 }").setPositiveButton(
                     "Di chuyển đến"
                 ) { _, _ ->
-                    endPoint = LatLng(position.latitude, position.longitude)
+                    endLocation = GeoCoordinate(position.latitude, position.longitude)
                     while (m_mapObjectList.size > 1) {
                         m_map!!.removeMapObject(m_mapObjectList[m_mapObjectList.size - 1])
                         m_mapObjectList.removeAt(m_mapObjectList.size - 1)
@@ -184,7 +191,7 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
                 .setNegativeButton("OK") { _, _ ->
                 }
                 .show()
-        })
+        }
     }
 
     private fun setMarker(lat: Double, long: Double) {
@@ -338,7 +345,7 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
                 val detailsRequest = autoSuggestPlace.placeDetailsRequest
                 detailsRequest!!.execute { p0, p1 ->
                     if (p1 == ErrorCode.NONE) {
-                        endPoint = LatLng(p0!!.location!!.coordinate!!.latitude,
+                        endLocation = GeoCoordinate(p0!!.location!!.coordinate!!.latitude,
                             p0!!.location!!.coordinate!!.longitude)
                         handlePlace(p0!!.location!!.coordinate!!)
                         setSearchMode(false)
@@ -401,21 +408,23 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
 
     }
 
-    // Xóa giữ liệu chỉ lấy 1 điểm đánh dấu
     private fun getLocation(place: GeoCoordinate, count: Int, isCheck: Boolean) {
         val routePlan = RoutePlan()
         val routeOptions = RouteOptions()
-        if (count == 0) {
-            routeOptions.routeType = RouteOptions.Type.SHORTEST
-        } else {
-            routeOptions.routeType = RouteOptions.Type.FASTEST
+        when (count) {
+            0 -> routeOptions.routeType = RouteOptions.Type.SHORTEST
+            1 -> routeOptions.routeType = RouteOptions.Type.FASTEST
+        }
+        when (typeVehicle) {
+            0 -> routeOptions.transportMode = RouteOptions.TransportMode.CAR
+            1 -> routeOptions.transportMode = RouteOptions.TransportMode.SCOOTER
         }
         routeOptions.routeCount = 1
         routePlan.routeOptions = routeOptions
         val destination = RouteWaypoint(place)
         val startPoint =
-            RouteWaypoint(GeoCoordinate(startLocation!!.latitude, startLocation!!.longitude))
-
+            RouteWaypoint(GeoCoordinate(startLocations!!))
+        mapViewModel.setEndLocation(place)
         routePlan.addWaypoint(startPoint)
         routePlan.addWaypoint(destination)
         val coreRouter = CoreRouter()
@@ -473,11 +482,6 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
             })
     }
 
-    private fun clearMap() {
-        m_map!!.removeMapObjects(m_mapObjectList)
-        m_mapObjectList.clear()
-    }
-
     private fun showDialog(place: GeoCoordinate) {
         var routeOptions = RouteOptions()
         var routePlan = RoutePlan()
@@ -488,16 +492,14 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
             .setSingleChoiceItems(tunes, -1)
             { dialog, i ->
                 if (tunes[i] == "Xe ô tô") {
-                    routeOptions.transportMode =
-                        RouteOptions.TransportMode.CAR
+                    mapViewModel.setTypeVehicle(0)
                     routePlan.routeOptions = routeOptions
                     getLocation(place, 1, true)
                     getLocation(place, 0, false)
                     layout_time.visibility = View.VISIBLE
                     dialog.dismiss()
                 } else {
-                    routeOptions.transportMode =
-                        RouteOptions.TransportMode.SCOOTER
+                    mapViewModel.setTypeVehicle(1)
                     routePlan.routeOptions = routeOptions
                     getLocation(place, 1, true)
                     getLocation(place, 0, false)

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.example.heremap
+package com.example.heremap.adapter
 import android.content.Context
 import com.here.android.mpa.search.DiscoveryResult
 import android.widget.ArrayAdapter
@@ -21,6 +21,7 @@ import android.view.ViewGroup
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.TextView
+import com.example.heremap.R
 
 class ResultListAdapter(
     context: Context?,
