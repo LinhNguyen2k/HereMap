@@ -18,7 +18,7 @@ import androidx.cardview.widget.CardView
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.ViewModelProvider
 import com.example.heremap.R
-import com.example.heremap.ResultListActivity
+//import com.example.heremap.ResultListActivity
 import com.example.heremap.adapter.AutoSuggestAdapter
 import com.example.heremap.viewmodel.MapViewModel
 import com.google.android.gms.maps.model.LatLng
@@ -136,7 +136,7 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
                     }, 100, true)
                     m_map = m_mapFragment!!.map
                     btnGps.setOnClickListener {
-                        mapViewModel.loadGPS(location)
+                        mapViewModel.loadGPS(location!!)
                     }
                 }
             }
@@ -310,17 +310,17 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
                     }
                 }
             }
-            AutoSuggest.Type.SEARCH -> {
-                val autoSuggestSearch = autoSuggest as AutoSuggestSearch
-                val discoverRequest = autoSuggestSearch.suggestedSearchRequest
-                discoverRequest!!.execute { p0, p1 ->
-                    if (p1 == ErrorCode.NONE) {
-                        s_discoverResultList = p0!!.items
-                        val intent = Intent(m_activity, ResultListActivity::class.java)
-                        m_activity.startActivity(intent)
-                    }
-                }
-            }
+//            AutoSuggest.Type.SEARCH -> {
+//                val autoSuggestSearch = autoSuggest as AutoSuggestSearch
+//                val discoverRequest = autoSuggestSearch.suggestedSearchRequest
+//                discoverRequest!!.execute { p0, p1 ->
+//                    if (p1 == ErrorCode.NONE) {
+//                        s_discoverResultList = p0!!.items
+//                        val intent = Intent(m_activity, ResultListActivity::class.java)
+//                        m_activity.startActivity(intent)
+//                    }
+//                }
+//            }
         }
     }
 

@@ -143,8 +143,6 @@ class AutoSuggestAdapter(
 //                    tv.text = "BoundaryBox: null"
 //                }
             }
-            else -> {
-            }
         }
         return convertView
     }

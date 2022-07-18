@@ -1,4 +1,3 @@
-
 package com.example.heremap
 
 import android.app.ListActivity
@@ -54,8 +53,7 @@ class ResultListActivity : ListActivity() {
 
                 m_placeDetailLayout!!.visibility = View.VISIBLE
                 m_placeName!!.text = place!!.name
-                val geoCoordinate = place.location!!
-                    .coordinate
+                val geoCoordinate = place.location!!.coordinate
                 m_placeLocation!!.text = geoCoordinate.toString()
             } else {
                 Toast.makeText(applicationContext,
