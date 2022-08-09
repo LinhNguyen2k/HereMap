@@ -24,7 +24,7 @@ class ResultListActivity : ListActivity() {
 
     private fun initUIElements() {
         m_placeDetailLayout = findViewById<View>(R.id.placeDetailLayout) as LinearLayout
-        m_placeDetailLayout!!.visibility = View.GONE
+        m_placeDetailLayout?.visibility = View.GONE
         m_placeName = findViewById<View>(R.id.placeName) as TextView
         m_placeLocation = findViewById<View>(R.id.placeLocation) as TextView
         val closePlaceDetailButton = findViewById<View>(R.id.closeLayoutButton) as Button
@@ -46,9 +46,8 @@ class ResultListActivity : ListActivity() {
         }
     }
 
-    private val m_placeResultListener: ResultListener<Place> = object : ResultListener<Place> {
-
-        override fun onCompleted(place: Place?, errorCode: ErrorCode?) {
+    private val m_placeResultListener: ResultListener<Place> =
+        ResultListener<Place> { place, errorCode ->
             if (errorCode == ErrorCode.NONE) {
 
                 m_placeDetailLayout!!.visibility = View.VISIBLE
@@ -61,5 +60,4 @@ class ResultListActivity : ListActivity() {
                     .show()
             }
         }
-    }
 }

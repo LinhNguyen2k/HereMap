@@ -59,10 +59,10 @@ class MapViewModel : ViewModel() {
         return result
     }
 
-    fun getLocation(place: GeoCoordinate, count: Int, isCheck: Boolean) {
+    fun getLocation(place: GeoCoordinate, type: Int, isCheck: Boolean) {
         val routePlan = RoutePlan()
         val routeOptions = RouteOptions()
-        when (count) {
+        when (type) {
             0 -> routeOptions.routeType = RouteOptions.Type.SHORTEST
             1 -> routeOptions.routeType = RouteOptions.Type.FASTEST
         }
@@ -86,34 +86,32 @@ class MapViewModel : ViewModel() {
                 ) {
                     if (p1 == RoutingError.NONE) {
 
-                        if (p0!![0].route != null) {
-                            m_mapRoute = MapRoute(p0[0].route)
-                            m_map!!.addMapObject(m_mapRoute!!)
-                            m_mapRoute!!.isManeuverNumberVisible = true
-                            val df = DecimalFormat("#.00")
-                            if (isCheck) {
-                                m_mapRoute!!.color = Color.BLUE
-                                val timeInHours: Int =
-                                    ((p0[0].route.getTtaExcludingTraffic(Route.WHOLE_ROUTE)!!
-                                        .duration))
-                                result_time1.value = "Thời gian:  ${formatTime(timeInHours)}"
+                        m_mapRoute = p0?.get(0)?.let { MapRoute(it.route) }
+                        m_map!!.addMapObject(m_mapRoute!!)
+                        m_mapRoute!!.isManeuverNumberVisible = true
+                        val df = DecimalFormat("#.00")
+                        if (isCheck) {
+                            m_mapRoute!!.color = Color.BLUE
+                            val timeInHours: Int =
+                                ((p0?.get(0)?.route?.getTtaExcludingTraffic(Route.WHOLE_ROUTE)!!
+                                    .duration))
+                            result_time1.value = "Thời gian:  ${formatTime(timeInHours)}"
 
-                                val a = ((m_mapRoute!!.route!!.length).toDouble() / 1000)
-                                result_distance1.value = "Khoảng cách ${df.format(a)} km"
+                            val a = ((m_mapRoute!!.route!!.length).toDouble() / 1000)
+                            result_distance1.value = "Khoảng cách ${df.format(a)} km"
 
-                            } else {
-                                m_mapRoute!!.color = Color.GRAY
-                                val timeInHours: Int =
-                                    ((p0[0].route.getTtaExcludingTraffic(Route.WHOLE_ROUTE)!!
-                                        .duration))
-                                result_time2.value = "Thời gian:  ${formatTime(timeInHours)}"
-                                val a = ((m_mapRoute!!.route!!.length).toDouble() / 1000)
-                                result_distance2.value = "Khoảng cách: ${df.format(a)} km"
-                            }
-                            val gbb = p0[0].route.boundingBox
-                            m_map!!.zoomTo(gbb!!, Map.Animation.NONE, Map.MOVE_PRESERVE_ORIENTATION)
-                            m_Route.add(m_mapRoute!!)
+                        } else {
+                            m_mapRoute!!.color = Color.GRAY
+                            val timeInHours: Int =
+                                ((p0?.get(0)?.route?.getTtaExcludingTraffic(Route.WHOLE_ROUTE)!!
+                                    .duration))
+                            result_time2.value = "Thời gian:  ${formatTime(timeInHours)}"
+                            val a = ((m_mapRoute!!.route!!.length).toDouble() / 1000)
+                            result_distance2.value = "Khoảng cách: ${df.format(a)} km"
                         }
+                        val gbb = p0[0].route.boundingBox
+                        m_map!!.zoomTo(gbb!!, Map.Animation.NONE, Map.MOVE_PRESERVE_ORIENTATION)
+                        m_Route.add(m_mapRoute!!)
                     }
                 }
             })

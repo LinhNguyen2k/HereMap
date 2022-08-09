@@ -86,10 +86,8 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
                 val temp = mapViewModel.startPoint
                 mapViewModel.startPoint = mapViewModel.endPoint
                 mapViewModel.endPoint = temp
-                if (mapViewModel.m_Route != null) {
-                    m_map!!.removeMapObjects(mapViewModel.m_Route)
-                    mapViewModel.m_Route.clear()
-                }
+                m_map!!.removeMapObjects(mapViewModel.m_Route)
+                mapViewModel.m_Route.clear()
                 val geo = GeoCoordinate(mapViewModel.endPoint!!.latitude,
                     mapViewModel.endPoint!!.longitude)
                 mapViewModel.getLocation(geo, 1, true)
@@ -123,20 +121,16 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
                             val geo = m_map!!.pixelToGeo(p0)
                             drawGeo(geo!!)
                             mapViewModel.endPoint = LatLng(geo.latitude, geo.longitude)
-                            if (mapViewModel.m_Route != null) {
-                                m_map!!.removeMapObjects(mapViewModel.m_Route)
-                                mapViewModel.m_Route.clear()
-                            }
-                            if (m_mapPoint != null) {
-                                m_map!!.removeMapObjects(m_mapPoint)
-                                m_mapPoint.clear()
-                            }
+                            m_map!!.removeMapObjects(mapViewModel.m_Route)
+                            mapViewModel.m_Route.clear()
+                            m_map!!.removeMapObjects(m_mapPoint)
+                            m_mapPoint.clear()
                             return false
                         }
                     }, 100, true)
                     m_map = m_mapFragment!!.map
                     btnGps.setOnClickListener {
-                        mapViewModel.loadGPS(location!!)
+                        mapViewModel.loadGPS(location)
                     }
                 }
             }
@@ -144,21 +138,21 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
     }
 
     private fun observe() {
-        mapViewModel.typeVehicle.observe(m_activity, {
+        mapViewModel.typeVehicle.observe(m_activity) {
             typeVehicle = it
-        })
-        mapViewModel.result_time1.observe(m_activity, {
+        }
+        mapViewModel.result_time1.observe(m_activity) {
             tv_time.text = it
-        })
-        mapViewModel.result_time2.observe(m_activity, {
+        }
+        mapViewModel.result_time2.observe(m_activity) {
             tv_time2.text = it
-        })
-        mapViewModel.result_distance1.observe(m_activity, {
+        }
+        mapViewModel.result_distance1.observe(m_activity) {
             createRoute.text = it
-        })
-        mapViewModel.result_distance2.observe(m_activity, {
+        }
+        mapViewModel.result_distance2.observe(m_activity) {
             tv_route2.text = it
-        })
+        }
 
     }
 
@@ -203,10 +197,8 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
         m_resultsListView!!.onItemClickListener =
             OnItemClickListener { parent, view, position, id ->
                 val item = parent.getItemAtPosition(position) as AutoSuggest
-                if (mapViewModel.m_Route != null) {
-                    m_map!!.removeMapObjects(mapViewModel.m_Route)
-                    mapViewModel.m_Route.clear()
-                }
+                m_map!!.removeMapObjects(mapViewModel.m_Route)
+                mapViewModel.m_Route.clear()
                 while (mapViewModel.m_mapObjectList.size > 1) {
                     m_map!!.removeMapObject(mapViewModel.m_mapObjectList[mapViewModel.m_mapObjectList.size - 1])
                     mapViewModel.m_mapObjectList.removeAt(mapViewModel.m_mapObjectList.size - 1)
@@ -321,6 +313,7 @@ class MapFragmentView(private val m_activity: AppCompatActivity) : LocationListe
 //                    }
 //                }
 //            }
+            else -> {}
         }
     }
 
